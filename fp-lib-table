@@ -1,0 +1,7 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "ESP32-S3-DEVKITC-1-N8R2")(type "KiCad")(uri "${KIPRJMOD}/myLibs/ESP32-S3-DEVKITC-1-N8R2")(options "")(descr ""))
+  (lib (name "DRV8262DDWR")(type "KiCad")(uri "${KIPRJMOD}/myLibs/DRV8262DDWR")(options "")(descr ""))
+  (lib (name "ul_DRV8262DDWR (1)")(type "KiCad")(uri "${KIPRJMOD}/myLibs/ul_DRV8262DDWR (1)")(options "")(descr ""))
+  (lib (name "easyeda2kicad")(type "KiCad")(uri "${KIPRJMOD}/myLibs/easyEda/easyeda2kicad.pretty")(options "")(descr ""))
+)
