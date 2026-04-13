@@ -22058,8 +22058,7 @@
 	)
 	(symbol
 		(lib_id "easyeda2kicad:KF243-5.0-2P")
-		(at 40.64 73.66 0)
-		(mirror y)
+		(at 40.64 73.66 180)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -22067,7 +22066,7 @@
 		(dnp no)
 		(uuid "61cd6ea9-6141-48a0-a5b9-22d767201b8f")
 		(property "Reference" "CN3"
-			(at 36.83 72.3899 0)
+			(at 36.83 74.9301 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22076,7 +22075,7 @@
 			)
 		)
 		(property "Value" "KF243-5.0-2P"
-			(at 36.83 74.9299 0)
+			(at 36.83 72.3901 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22085,7 +22084,7 @@
 			)
 		)
 		(property "Footprint" "easyeda2kicad:CONN-TH_P5.00_KF243-5.0-2P"
-			(at 40.64 82.55 0)
+			(at 40.64 64.77 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22094,7 +22093,7 @@
 			)
 		)
 		(property "Datasheet" "https://lcsc.com/product-detail/New-Quadratic-Unclassified-Data_Cixi-Kefa-Elec-KF243-5-0-2P_C475222.html"
-			(at 40.64 85.09 0)
+			(at 40.64 62.23 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22103,7 +22102,7 @@
 			)
 		)
 		(property "Description" "gun2"
-			(at 40.64 67.056 0)
+			(at 40.64 80.264 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -28317,8 +28316,7 @@
 	)
 	(symbol
 		(lib_id "easyeda2kicad:KF243-5.0-2P")
-		(at 41.91 162.56 0)
-		(mirror y)
+		(at 41.91 162.56 180)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -28326,7 +28324,7 @@
 		(dnp no)
 		(uuid "d8e9bf83-315c-4039-bf4d-5d52f27edf77")
 		(property "Reference" "CN5"
-			(at 38.1 161.2899 0)
+			(at 38.1 163.8301 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -28335,7 +28333,7 @@
 			)
 		)
 		(property "Value" "KF243-5.0-2P"
-			(at 38.1 163.8299 0)
+			(at 38.1 161.2901 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -28344,7 +28342,7 @@
 			)
 		)
 		(property "Footprint" "easyeda2kicad:CONN-TH_P5.00_KF243-5.0-2P"
-			(at 41.91 171.45 0)
+			(at 41.91 153.67 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -28353,7 +28351,7 @@
 			)
 		)
 		(property "Datasheet" "https://lcsc.com/product-detail/New-Quadratic-Unclassified-Data_Cixi-Kefa-Elec-KF243-5-0-2P_C475222.html"
-			(at 41.91 173.99 0)
+			(at 41.91 151.13 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -28362,7 +28360,7 @@
 			)
 		)
 		(property "Description" "gun4"
-			(at 42.164 155.956 0)
+			(at 42.164 169.164 0)
 			(effects
 				(font
 					(size 1.27 1.27)
