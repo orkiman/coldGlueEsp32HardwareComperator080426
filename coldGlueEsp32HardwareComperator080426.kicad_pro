@@ -493,7 +493,7 @@
         "line_style": 0,
         "name": "high_power",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 1,
+        "priority": 2,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 1.2,
         "via_diameter": 0.8,
@@ -506,11 +506,22 @@
         "microvia_drill": 0.1,
         "name": "ignoreGnd",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 0,
+        "priority": 1,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.25,
         "via_diameter": 0.6,
         "via_drill": 0.3
+      },
+      {
+        "clearance": 0.2,
+        "name": "logicPower",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 0,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.5,
+        "via_diameter": 0.7,
+        "via_drill": 0.35,
+        "wire_width": 20
       }
     ],
     "meta": {
@@ -525,7 +536,7 @@
         "high_power"
       ],
       "+5V": [
-        "logic_power"
+        "logicPower"
       ],
       "/U1_OUT1": [
         "high_power"
@@ -551,6 +562,9 @@
       "/U2_OUT4": [
         "high_power"
       ],
+      "/pure5V": [
+        "logicPower"
+      ],
       "Net-(CN2-Pad1)": [
         "high_power"
       ],
@@ -563,8 +577,11 @@
       "Net-(CN5-Pad2)": [
         "high_power"
       ],
+      "Net-(D11-A)": [
+        "logicPower"
+      ],
       "Net-(D11-K)": [
-        "logic_power"
+        "logicPower"
       ],
       "Net-(Q1-D)": [
         "high_power"
