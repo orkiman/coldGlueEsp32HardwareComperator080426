@@ -10,8 +10,8 @@
 //     stores the encoder pulse count at its leading-edge photocell event.
 //   - Walk each sheet's pattern lazily (no pre-expansion of dot lists).
 //   - Fire events when the encoder reaches their absolute pulse positions:
-//       * Dot:  one seq::fire(g) per dot, time-based hold = cfg.hold_time_ms.
-//       * Line: seq::fire(g, BIG) at start, seq::abort(g) at end.
+//       * Dot:  one seq::fire(g) per dot, on-time budget = pattern[g].on_timeout_ms.
+//       * Line: seq::fire(g, BIG) at start, seq::abort(g) at end (position-driven).
 //   - Provide calibration mode: count pulses between the leading and trailing
 //     photocell edges of one sheet of known length, then publish pulses_per_mm.
 //

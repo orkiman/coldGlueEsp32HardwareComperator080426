@@ -220,7 +220,7 @@ static void patternTask(void*) {
 
                 if (!tooSlow) {
                     if (action == 0) {                     // dot
-                        seq::fire(g, 0);                   // hold = cfg.hold_time_ms
+                        seq::fire(g, 0);                   // on-time = pattern[g].on_timeout_ms
                     } else if (action == 1) {              // open line
                         seq::fire(g, 5000);                // long; closed by action 2
                     } else if (action == 2) {              // close line

@@ -1,0 +1,148 @@
+"""Patterns screen — per-gun toolbar + multi-lane visual editor."""
+from __future__ import annotations
+
+from PySide6.QtWidgets import (QComboBox, QGridLayout, QGroupBox, QHBoxLayout,
+                               QLabel, QPushButton, QVBoxLayout, QWidget)
+
+from app import protocol as proto
+from app.state import AppState, GunPattern
+from ui.widgets.numeric_field import NumericField
+from ui.widgets.pattern_editor import GUN_COLORS, PatternEditorView
+
+
+_TYPE_LABEL = {
+    proto.PatternType.NONE:  "ללא",
+    proto.PatternType.LINES: "קווים",
+    proto.PatternType.DOTS:  "נקודות",
+}
+
+
+class GunToolbar(QGroupBox):
+    """Per-gun compact toolbar above the editor."""
+
+    def __init__(self, gun_idx: int, state: AppState,
+                 editor: PatternEditorView) -> None:
+        super().__init__(f"אקדח {gun_idx + 1}")
+        self.gun_idx = gun_idx
+        self.state   = state
+        self.editor  = editor
+
+        color = GUN_COLORS[gun_idx]
+        self.setStyleSheet(
+            f"QGroupBox::title {{ color: {color.name()}; font-weight: 700; }}")
+
+        self.type_combo = QComboBox()
+        for t in (proto.PatternType.NONE,
+                  proto.PatternType.LINES,
+                  proto.PatternType.DOTS):
+            self.type_combo.addItem(_TYPE_LABEL[t], t)
+        self.type_combo.currentIndexChanged.connect(self._on_type_changed)
+
+        # Per-gun on-timeout budget. In Dots mode this is the droplet size
+        # (user-facing label "גודל טיפה"). In Lines mode the firmware uses
+        # it only as a long safety ceiling, so we grey the field out there.
+        self.f_droplet = NumericField("גודל טיפה (זמן ON)", "ms",
+                                      0.2, 50.0, 0.1, 2)
+        self.f_droplet.bind(self._on_on_timeout_changed)
+
+        btn_add  = QPushButton("הוסף מקטע")
+        btn_add.clicked.connect(lambda: editor.add_segment(gun_idx))
+        btn_clr  = QPushButton("נקה")
+        btn_clr.clicked.connect(lambda: editor.clear_gun(gun_idx))
+        btn_test = QPushButton("בדיקה")
+        btn_test.setCheckable(True)
+        btn_test.toggled.connect(self._on_test_toggled)
+        self.btn_test = btn_test
+
+        row1 = QHBoxLayout()
+        row1.addWidget(QLabel("סוג:"))
+        row1.addWidget(self.type_combo, 1)
+        row1.addWidget(btn_add)
+        row1.addWidget(btn_clr)
+        row1.addWidget(btn_test)
+
+        outer = QVBoxLayout(self)
+        outer.addLayout(row1)
+        outer.addWidget(self.f_droplet)
+
+    def set_type_from_state(self, ptype: proto.PatternType) -> None:
+        idx = self.type_combo.findData(ptype)
+        if idx >= 0:
+            self.type_combo.blockSignals(True)
+            self.type_combo.setCurrentIndex(idx)
+            self.type_combo.blockSignals(False)
+        # Droplet field is meaningful only for Dots — disable otherwise.
+        self.f_droplet.setEnabled(ptype == proto.PatternType.DOTS)
+
+    def set_droplet_from_state(self, on_timeout_ms: float) -> None:
+        self.f_droplet.setValue(on_timeout_ms)
+
+    def _on_type_changed(self, _i: int) -> None:
+        ptype: proto.PatternType = self.type_combo.currentData()
+        self.editor.set_gun_type(self.gun_idx, ptype)
+        self.f_droplet.setEnabled(ptype == proto.PatternType.DOTS)
+
+    def _on_on_timeout_changed(self, v: float) -> None:
+        self.state.patterns[self.gun_idx].on_timeout_ms = float(v)
+        # Push only if the pattern actually exists on the firmware.
+        if self.state.patterns[self.gun_idx].type != proto.PatternType.NONE:
+            self.state.push_pattern(self.gun_idx)
+
+    def _on_test_toggled(self, on: bool) -> None:
+        gun_1based = self.gun_idx + 1
+        if on:
+            self.state.test_open(gun_1based, timeout_ms=5000)
+        else:
+            self.state.test_close(gun_1based)
+
+
+class PatternsScreen(QWidget):
+    def __init__(self, state: AppState) -> None:
+        super().__init__()
+        self.state  = state
+        self.editor = PatternEditorView()
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(8)
+        self.toolbars: list[GunToolbar] = []
+        for i in range(proto.NUM_GUNS):
+            tb = GunToolbar(i, state, self.editor)
+            self.toolbars.append(tb)
+            grid.addWidget(tb, 0, i)
+
+        hint = QLabel(
+            "טיפים: לחיצה כפולה על נתיב = הוספת מקטע · "
+            "גרירת ידיות = שינוי גבולות · גרירת גוף = הזזה · "
+            "גלגלת על מקטע נקודות = שינוי מרווח · "
+            "קליק ימני על מקטע = מחיקה")
+        hint.setObjectName("StatCaption")
+
+        root = QVBoxLayout(self)
+        root.addLayout(grid)
+        root.addWidget(self.editor, 1)
+        root.addWidget(hint)
+
+        # Live publish wiring (editor -> firmware via state).
+        self.editor.pattern_committed.connect(self._on_pattern_committed)
+        state.config_changed.connect(self._on_config)
+        # Initial sync.
+        for i in range(proto.NUM_GUNS):
+            self.toolbars[i].set_type_from_state(state.patterns[i].type)
+            self.toolbars[i].set_droplet_from_state(
+                state.patterns[i].on_timeout_ms)
+            self.editor.load_pattern(i, state.patterns[i].type,
+                                     state.patterns[i].elements)
+
+    def _on_pattern_committed(self, gun_idx: int) -> None:
+        ptype, elems = self.editor.export_pattern(gun_idx)
+        gp: GunPattern = self.state.patterns[gun_idx]
+        gp.type     = ptype
+        gp.elements = list(elems)
+        # Keep toolbar in sync if the editor changed the type itself.
+        self.toolbars[gun_idx].set_type_from_state(ptype)
+        # Live push (push_pattern itself short-circuits if type is NONE).
+        self.state.push_pattern(gun_idx)
+
+    def _on_config(self, _c) -> None:
+        # Future: drive paper length from config if we add a field for it.
+        pass

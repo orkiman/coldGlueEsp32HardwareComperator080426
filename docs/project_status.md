@@ -4,7 +4,9 @@
 > The original spec lives in `initial prompt.md` and should not be edited;
 > this file records any decisions, deltas, and the current state.
 
-Last updated: Stage 1 firmware scaffold complete, awaiting bench bring-up.
+Last updated: Stage 2 GUI scaffold (PySide6) in progress; per-gun
+`on_timeout_ms` (renamed from `hold_time_ms`, semantics changed to
+"start-of-cycle timer") landed in both firmware and GUI.
 
 ---
 
@@ -13,7 +15,7 @@ Last updated: Stage 1 firmware scaffold complete, awaiting bench bring-up.
 | Stage | Scope                                          | Status            |
 | ----- | ---------------------------------------------- | ----------------- |
 | 1     | ESP32-S3 main controller firmware              | **Code complete** — pending hardware bring-up |
-| 2     | PC-side GUI over UART0 (replaces the original LVGL HMI plan) | Not started |
+| 2     | PC-side GUI over UART0 (PySide6)               | **In progress** — `gui/` tree; mock-link works, real-link path implemented |
 
 The original Stage 2 plan was an LVGL HMI on a second ESP32-S3 + 7" touch
 panel. **Revised decision:** for now the operator UI runs on a PC and talks
@@ -49,14 +51,29 @@ embedded HMI later is a drop-in.
 
 ## 3. Dot Sequence — Implementation Map
 
-| Phase                | Trigger                | File / function                                          |
-| -------------------- | ---------------------- | -------------------------------------------------------- |
-| 1 Peak / Pick        | `seq::fire(g)`         | `rt/GunSequencer.cpp :: fire()`                          |
-| 2 Hold (chopping)    | LM339 peak IRQ         | `rt/GunSequencer.cpp :: peakIsr()`                       |
-| 3 Active Fast Decay  | `esp_timer` callback   | `rt/GunSequencer.cpp :: holdTimerCb() -> enterPhase3()`  |
+| Phase                | Trigger                          | File / function                                          |
+| -------------------- | -------------------------------- | -------------------------------------------------------- |
+| 1 Peak / Pick        | `seq::fire(g)`                   | `rt/GunSequencer.cpp :: fire()`                          |
+| 2 Hold (chopping)    | LM339 peak IRQ                   | `rt/GunSequencer.cpp :: peakIsr()`                       |
+| 3 Active Fast Decay  | on-timer expiry OR `seq::abort()`| `rt/GunSequencer.cpp :: onTimerCb() / abort()`           |
 
 Per-gun state machine is `Idle -> Peak -> Hold -> Decay -> Idle`, guarded
 by a `compare_exchange_strong` so `fire()` is safe from any context.
+
+### On-timer (Peak+Hold budget)
+
+`fire()` arms a single `esp_timer` (`onTimer`, per gun) for the full
+per-gun `on_timeout_ms` budget, starting **at the moment of fire()**, not
+at the LM339 peak trip.  This means:
+
+- Normal flow: LM339 -> `peakIsr` -> Hold phase; the same timer keeps
+  counting and forces Phase 3 when the budget expires.
+- Fault flow: if the peak trip never arrives (open coil, broken sense,
+  wrong threshold), the same timer still fires, drops the gun into
+  Phase 3, and masks the late IRQ defensively.  No more "stuck in Peak"
+  failure mode.
+- `seq::abort(g)` stops the on-timer and force-enters Phase 3 (used by
+  Lines to terminate at the encoder-position end of the line).
 
 ---
 
@@ -105,15 +122,44 @@ currently configured pattern type (see `rt/TestRunner.cpp`):
 
 ## 7. Protocol — Deltas From `initial prompt.md` §8
 
-The wire protocol is unchanged. The only addition is one new `error`
-reason string:
+### 7.1 New error reason
 
 | Where          | Reason                  | Meaning                                                 |
 | -------------- | ----------------------- | ------------------------------------------------------- |
 | `test_open`    | `no_pattern_or_busy`    | Gun has no pattern, or a test is already running on it. |
+| `set_pattern`  | `bad_on_timeout`        | `on_timeout_ms` was supplied but ≤ 0.                   |
 
 All other validation errors (`bad_pulses_per_mm`, `hold_ge_pick`, etc.) are
-sanity checks added to `set_config` / `set_pattern`.
+sanity checks in `set_config` / `set_pattern`.
+
+### 7.2 `on_timeout_ms` — per-gun, start-of-cycle
+
+Previously a global `hold_time_ms` in `RuntimeConfig` was started by
+`peakIsr` and counted only the Hold phase.  It has been replaced by a
+per-gun `on_timeout_ms` inside `GunPattern`, started by `fire()` itself
+and counting the **entire** Peak+Hold budget.
+
+- `set_config` **no longer accepts** any droplet-timing field.
+- `set_pattern` accepts a top-level optional `on_timeout_ms` (ms, float).
+  Absent → preserve previous per-gun value (`editScratch()` copies the
+  active buffer).
+- Default per-gun value at boot: **1.2 ms**.
+- **Dots mode**: `on_timeout_ms` is the user-facing droplet on-time.
+- **Lines mode**: `on_timeout_ms` is used only as a long safety ceiling
+  (`seq::fire(g, 5000)` is hard-capped to 5 s inside `fire()`).  Line
+  termination is encoder-position driven (`seq::abort(g)` at `end_mm`,
+  see `PatternScheduler::patternTask`).  Speed-safety (`min_speed_mm_s`)
+  still suppresses firing entirely.
+- **No more "stuck in Peak"**: because the on-timer starts at `fire()`,
+  a missing LM339 trip cannot pin IN1 HIGH indefinitely.
+
+Example payload:
+
+```json
+{ "cmd": "set_pattern", "gun": 2, "type": "dots",
+  "on_timeout_ms": 1.8,
+  "elements": [ {"start": 60, "end": 240, "spacing": 5} ] }
+```
 
 ---
 
@@ -122,7 +168,13 @@ sanity checks added to `set_config` / `set_pattern`.
 - **`Adafruit_MCP4728::fastWrite` signature** — assumed `(uint16_t, uint16_t, uint16_t, uint16_t)` returning `bool`; will fail at compile if the installed lib differs.
 - **PCNT glitch filter** at 100 APB ticks (~1.25 µs). Will tune once we see the 6N137's real edge behaviour on the scope.
 - **`NEAR_ZERO_V = 0.10 V`** Phase-3 termination threshold. Tunable in `rt/GunSequencer.cpp`. Right now corresponds to ~0.05 A coil current.
-- **Hold-timer dispatch via `esp_timer` task context** (not ISR). Worst-case latency ~50 µs; fine for hold ≥ 1 ms but introduces jitter if `hold_time_ms` is set absurdly small.
+- **On-timer dispatch via `esp_timer` task context** (not ISR). Worst-case latency ~50 µs; fine for on-times ≥ 1 ms but introduces jitter if `on_timeout_ms` is set absurdly small.
+- **No `error` event yet for the "peak trip never arrived" case** — the
+  on-timer correctly drops the gun into Phase 3 (no stuck-in-Peak any
+  more), but we still can't tell from outside whether a given fire cycle
+  passed through `peakIsr` or hit the on-timeout without it.  *Future:*
+  emit a diagnostic event from `onTimerCb` if the gun was still in
+  `Phase::Peak` when the timer expired.
 
 ---
 
@@ -134,11 +186,30 @@ README.md
 docs/
   initial prompt.md            (immutable spec — do not edit)
   project_status.md            (this file)
-src/
+src/                           (ESP32-S3 firmware)
   main.cpp
   config/Config.{h,cpp}
   comms/Events.{h,cpp}    UartJson.{h,cpp}
   hw/Pins.h               Driver.{h,cpp}   Dac.{h,cpp}   Encoder.{h,cpp}
   rt/Control.{h,cpp}      GunSequencer.{h,cpp}   PatternScheduler.{h,cpp}   TestRunner.{h,cpp}
   sys/Fault.{h,cpp}       Watchdog.{h,cpp}       Status.{h,cpp}
+gui/                           (PySide6 operator UI)
+  run.py                       Launcher (`--mock` for offline dev)
+  requirements.txt
+  app/
+    protocol.py                NDJSON command builders + enums
+    link_base.py               Abstract link (Qt signals)
+    mock_link.py               In-process simulator
+    serial_link.py             pyserial-backed real transport
+    state.py                   AppState — single source of truth
+    profiles.py                Save/load full operator profile (JSON)
+  ui/
+    main_window.py             Sidebar (הפעלה / תוכנית / הגדרות) + menu
+    styles.qss                 Dark theme
+    screens/operate.py         Run-time controls + live status
+    screens/patterns.py        Per-gun toolbar + visual editor (4 lanes)
+    screens/configure.py       Currents, globals, calibration, event log
+    widgets/connection_bar.py  COM picker / Connect / Active / E-stop
+    widgets/numeric_field.py   Debounced labelled spinbox
+    widgets/pattern_editor.py  QGraphicsScene-based segment editor
 ```

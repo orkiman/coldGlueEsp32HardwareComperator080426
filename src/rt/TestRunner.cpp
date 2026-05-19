@@ -31,7 +31,7 @@ static void doStop(uint8_t g);
 static void dotTickCb(void* user) {
     uint8_t g = (uint8_t)(uintptr_t)user;
     if (s_t[g].mode.load(std::memory_order_acquire) != Mode::Dots) return;
-    seq::fire(g, 0);   // hold = cfg::hold_time_ms
+    seq::fire(g, 0);   // on-time = pattern[g].on_timeout_ms
 }
 
 static void deadlineCb(void* user) {

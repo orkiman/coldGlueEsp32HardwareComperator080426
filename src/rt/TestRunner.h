@@ -11,7 +11,7 @@
 //           test_close aborts early -> immediate Phase 3.
 //
 //   Dots  : fire individual dots at 20 Hz until either `timeout_ms` elapses
-//           or test_close is received. Each dot uses cfg::hold_time_ms.
+//           or test_close is received. Each dot uses pattern[g].on_timeout_ms.
 //
 //   None  : error (no pattern configured for this gun).
 //

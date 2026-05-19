@@ -1,0 +1,134 @@
+/* Dark industrial theme. Colors tuned for high-contrast, factory-floor use. */
+
+QWidget {
+    background-color: #1e2227;
+    color: #e6e9ee;
+    font-size: 11pt;
+}
+
+QMainWindow, QDialog { background-color: #181b1f; }
+
+QGroupBox {
+    border: 1px solid #2d333b;
+    border-radius: 6px;
+    margin-top: 14px;
+    padding: 10px;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    right: 10px;
+    padding: 0 6px;
+    color: #9ca6b3;
+}
+
+QPushButton {
+    background-color: #2d333b;
+    border: 1px solid #3a414b;
+    border-radius: 4px;
+    padding: 8px 16px;
+    min-height: 22px;
+}
+QPushButton:hover    { background-color: #3a414b; }
+QPushButton:pressed  { background-color: #242a31; }
+QPushButton:disabled { color: #6b727c; background-color: #23272d; }
+
+QPushButton#PrimaryButton {
+    background-color: #2563eb;
+    border: 1px solid #1d4ed8;
+    font-weight: 600;
+    padding: 12px 22px;
+}
+QPushButton#PrimaryButton:hover  { background-color: #1d4ed8; }
+QPushButton#DangerButton {
+    background-color: #b91c1c;
+    border: 1px solid #991b1b;
+    font-weight: 600;
+}
+QPushButton#DangerButton:hover   { background-color: #991b1b; }
+
+QLineEdit, QComboBox {
+    background-color: #11141a;
+    border: 1px solid #2d333b;
+    border-radius: 4px;
+    padding: 6px 10px;
+    selection-background-color: #2563eb;
+}
+QComboBox::drop-down { border: 0; width: 24px; }
+
+/* Spinboxes are forced to LTR in code (NumericField) so digits are
+   right-aligned and the buttons sit on the right edge. We reserve space
+   on the right via padding so the digits are never overlapped. */
+QDoubleSpinBox, QSpinBox {
+    background-color: #11141a;
+    border: 1px solid #2d333b;
+    border-radius: 4px;
+    padding: 6px 32px 6px 10px;
+    selection-background-color: #2563eb;
+    min-height: 22px;
+}
+QDoubleSpinBox::up-button, QSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 24px;
+    border-left: 1px solid #2d333b;
+    border-bottom: 1px solid #2d333b;
+    border-top-right-radius: 4px;
+    background: #23272d;
+}
+QDoubleSpinBox::down-button, QSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 24px;
+    border-left: 1px solid #2d333b;
+    border-bottom-right-radius: 4px;
+    background: #23272d;
+}
+QDoubleSpinBox::up-button:hover, QSpinBox::up-button:hover,
+QDoubleSpinBox::down-button:hover, QSpinBox::down-button:hover {
+    background: #2d333b;
+}
+QDoubleSpinBox::up-arrow, QSpinBox::up-arrow {
+    width: 8px; height: 8px;
+    image: none;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 6px solid #e6e9ee;
+}
+QDoubleSpinBox::down-arrow, QSpinBox::down-arrow {
+    width: 8px; height: 8px;
+    image: none;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 6px solid #e6e9ee;
+}
+
+QTabWidget::pane { border: 1px solid #2d333b; border-radius: 6px; top: -1px; }
+QTabBar::tab {
+    background: #23272d;
+    padding: 8px 18px;
+    border: 1px solid #2d333b;
+    border-bottom: 0;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+QTabBar::tab:selected { background: #2d333b; color: #ffffff; }
+
+QListWidget {
+    background-color: #11141a;
+    border: 1px solid #2d333b;
+    border-radius: 6px;
+    padding: 4px;
+}
+QListWidget::item { padding: 12px 18px; border-radius: 4px; }
+QListWidget::item:selected { background-color: #2563eb; }
+
+QLabel#StatLabel  { font-size: 28pt; font-weight: 700; color: #e6e9ee; }
+QLabel#StatCaption { color: #9ca6b3; font-size: 10pt; }
+
+QPlainTextEdit {
+    background-color: #0c0f13;
+    border: 1px solid #2d333b;
+    border-radius: 4px;
+    font-family: "Consolas", monospace;
+    font-size: 10pt;
+}

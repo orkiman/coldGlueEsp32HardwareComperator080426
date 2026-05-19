@@ -27,22 +27,32 @@ struct PatternElement {
 enum class PatternType : uint8_t { None = 0, Lines = 1, Dots = 2 };
 
 struct GunPattern {
-    PatternType    type        = PatternType::None;
-    uint8_t        count       = 0;
+    PatternType    type         = PatternType::None;
+    uint8_t        count        = 0;
+    // Total on-time budget for one fire cycle (ms), measured from the moment
+    // seq::fire() is called -- i.e. from the start of the Peak phase, NOT
+    // from the LM339 peak-current trip. When this elapses the sequencer is
+    // forced into Phase 3 (Active Fast Decay) regardless of which phase it
+    // is currently in. This also serves as the fail-safe if peak current
+    // is never reached (open coil, broken sense path, etc.).
+    //   * Dots mode  -> droplet on-time (the user-facing "drop size").
+    //   * Lines mode -> ignored for normal pattern execution (lines end on
+    //                   encoder position via seq::abort). Still acts as the
+    //                   global 5 s safety ceiling enforced inside fire().
+    float          on_timeout_ms = 1.2f;
     PatternElement elems[MAX_PATTERN_ELEMENTS_PER_GUN];
 };
 
 struct RuntimeConfig {
-    // ---- set_config payload ----
+    // ---- set_config payload (global) ----
     float    pulses_per_mm        = 12.34f;
     float    min_speed_mm_s       = 100.0f;
     float    photocell_offset_mm  = 250.0f;
     uint32_t debounce_ms          = 20;
     float    pick_current_a       = 1.0f;
     float    hold_current_a       = 0.4f;
-    float    hold_time_ms         = 1.2f;
 
-    // ---- per-gun pattern ----
+    // ---- per-gun pattern (includes per-gun on_timeout_ms / droplet size) ----
     GunPattern pattern[pins::NUM_GUNS];
 };
 

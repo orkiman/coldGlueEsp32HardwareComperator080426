@@ -11,12 +11,18 @@
 //   - IN1=HIGH, MUX_SELECT=HIGH (arm hardware loop)
 //   - Enable peak interrupt for this gun
 //
+// On-timer:  armed by fire() at the START of Phase 1.  Counts the full
+//   Peak+Hold budget (per-gun pattern.on_timeout_ms, or caller-supplied
+//   onMs override).  When it expires we drop straight to Phase 3 no
+//   matter which phase we are in -- this is also the fail-safe for
+//   "peak trip never arrived".
+//
 // Phase 2 (Hold):  triggered by LM339 -> peakIsr
 //   - Disable own peak interrupt (mask the chopping signals)
 //   - DAC[g] := hold threshold (e.g. 0.8V for 0.4A)
-//   - Start gptimer for Thold (cfg::hold_time_ms; overridden by test_open)
+//   - The on-timer keeps counting the remaining budget.
 //
-// Phase 3 (Active Fast Decay):  triggered by hold timer
+// Phase 3 (Active Fast Decay):  triggered by on-timer (or abort())
 //   - DAC[g] := ~zero threshold (e.g. 0.1V)
 //   - IN1=LOW   (MUX_SELECT stays HIGH so LM339 drives IN2 -> Reverse Drive)
 //   - When current collapses past the near-zero threshold, LM339 drops IN2,
@@ -35,9 +41,10 @@ enum class Phase : uint8_t {
 void init();                                                       // wires up peak ISRs + gptimers
 
 // Fire a full dot sequence on gun g (0..3).
-// holdMs == 0 => use cfg::hold_time_ms; otherwise override (test_open).
+// onMs == 0 => use the gun's pattern.on_timeout_ms; otherwise override
+// with a caller-supplied total Peak+Hold budget in milliseconds.
 // Returns false if the gun is busy or system is faulted / inactive.
-bool fire(uint8_t gunIdx, uint32_t holdMs = 0) IRAM_ATTR;
+bool fire(uint8_t gunIdx, uint32_t onMs = 0) IRAM_ATTR;
 
 // Abort any in-flight sequence on gun g (immediate Phase 3).
 // gun == 0xFF -> all guns.  IRAM-safe.
