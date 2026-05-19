@@ -1,0 +1,47 @@
+#pragma once
+#include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+
+// =============================================================================
+// Cross-core event pipe: Core 1 (ISRs / RT tasks) -> Core 0 (UART emitter).
+//
+// All payloads are POD and small (<= 32 bytes) so xQueueSendFromISR is cheap.
+// The emitter task drains the queue and formats NDJSON on Core 0 only.
+// No module other than EmitterTask is allowed to touch Serial.
+// =============================================================================
+
+namespace evt {
+
+enum class Kind : uint8_t {
+    Ready = 0,           // {"event":"ready"}
+    Ack,                 // {"event":"ack","cmd":"..."}
+    Error,               // {"event":"error","cmd":"..","reason":".."}
+    CalibResult,         // {"event":"calib_result","pulses_per_mm":X}
+    Status,              // {"event":"status",...}
+    WatchdogTimeout,     // {"event":"watchdog_timeout"}
+};
+
+// Short fixed-width string fields keep the queue element trivially copyable.
+struct Event {
+    Kind    kind;
+    char    cmd[20];      // for Ack / Error
+    char    reason[24];   // for Error
+    float   f1;           // CalibResult: pulses_per_mm ; Status: pos_mm
+    float   f2;           // Status: speed_mm_s
+    uint8_t b1;           // Status: active flag
+};
+
+void init();                                  // creates queue + spawns emitter
+bool post(const Event& e);                    // task context
+bool postFromISR(const Event& e, BaseType_t* hpWoken);
+
+// --- Convenience helpers (task context only) ---
+void postReady();
+void postAck(const char* cmd);
+void postError(const char* cmd, const char* reason);
+void postCalibResult(float pulses_per_mm);
+void postWatchdogTimeout();
+void postStatus(float pos_mm, float speed_mm_s, bool active);
+
+} // namespace evt
